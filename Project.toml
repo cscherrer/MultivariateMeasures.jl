@@ -3,6 +3,15 @@ uuid = "b5e7b3f5-fe28-44da-b8ce-1f533daaa309"
 authors = ["Chad Scherrer <chad.scherrer@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
+MeasureTheory = "eadaa1a4-d27c-401d-8699-e962e1bbc33b"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+StrideArrays = "d1fa6d79-ef01-42a6-86c9-f7c551f8593b"
+
 [compat]
 julia = "1"
 
