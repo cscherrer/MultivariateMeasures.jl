@@ -1,5 +1,5 @@
 using MeasureTheory, Static, BenchmarkTools, LinearAlgebra, StaticArrays
-
+using MultivariateMeasures
 x = randn(200,200);
 Σ = x' * x;
 

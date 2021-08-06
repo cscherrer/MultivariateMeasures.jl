@@ -1,31 +1,32 @@
 
 # Multivariate Normal distribution
 
-import StatsFuns
+using StatsFuns
 using LinearAlgebra
-export MvNormal
 using Random
 import Base
 using LoopVectorization
 
+import MeasureTheory: logdensity
+import MeasureTheory: MvNormal
+
 using StrideArrays
 using StaticArrays
 
-@parameterized MvNormal(μ, Σ)
 
-@kwstruct MvNormal(Σ)
+# @kwstruct MvNormal(Σ)
 
-@kwstruct MvNormal(μ, Σ)
+# @kwstruct MvNormal(μ, Σ)
 
-@kwstruct MvNormal(σ)
+# @kwstruct MvNormal(σ)
 
-@kwstruct MvNormal(μ, σ)
+# @kwstruct MvNormal(μ, σ)
 
-@kwstruct MvNormal(μ, Ω)
+# @kwstruct MvNormal(μ, Ω)
 
-@kwstruct MvNormal(Ω)
+# @kwstruct MvNormal(Ω)
 
-@kwstruct MvNormal(ω)
+# @kwstruct MvNormal(ω)
 
 const LowerCholesky{T} = Cholesky{T, <:LowerTriangular} 
 const UpperCholesky{T} = Cholesky{T, <:UpperTriangular} 
@@ -62,12 +63,13 @@ logdensity(d::MvNormal{(:σ,), <:Tuple{<:Cholesky}}, y) = logdensity_mvnormal_σ
 logdensity_mvnormal_σ(UL::Union{UpperTriangular, LowerTriangular}, y::AbstractVector) = logdensity_mvnormal_σ(KnownSize(UL), y)
 
 
-@inline @generated function logdensity_mvnormal_σ(U::KnownSize{Tuple{k,k}, <:UpperTriangular}, y::AbstractVector{T}) where {k,T}
+@generated function logdensity_mvnormal_σ(U::KnownSize{Tuple{k,k}, <:UpperTriangular}, y::AbstractVector{T}) where {k,T}
     log2π = log(big(2) * π)
 
     # Solve `y = σz` for `z`. We need this only as a way to calculate `z ⋅ z`
 
     header = quote
+        $(Expr(:meta,:inline))
         U = U.value
         Udata = U.data
         z_dot_z = zero($T)
@@ -118,33 +120,36 @@ end
 ###############################################################################
 # MvNormal(ω)
 
-
+function logdensity(UnrollQ::MayUnroll, d::MvNormal{(:ω,), <:Tuple{<:Cholesky}}, y)
+    logdensity_mvnormal_ω(UnrollQ, KnownSize(getfield(d.ω, :factors)), y)
+end
 
 logdensity(d::MvNormal{(:ω,), <:Tuple{<:Cholesky}}, y) = logdensity_mvnormal_ω(getfield(d.ω, :factors), y)
 
 logdensity_mvnormal_ω(UL::Union{UpperTriangular, LowerTriangular}, y::AbstractVector) = logdensity_mvnormal_ω(KnownSize(UL), y)
 
-@inline @generated function logdensity_mvnormal_ω(U::KnownSize{Tuple{k,k}, <:UpperTriangular}, y::AbstractVector{T}) where {k,T}
+# TODO: Can we do this statically without a generated function?
+@generated function logdensity_mvnormal_ω(U::KnownSize{Tuple{k,k}, <:UpperTriangular}, y::AbstractVector) where {k}
+    UnrollQ = k < 20 ? Unroll() : NoUnroll()
+
+    quote
+        $(Expr(:meta,:inline))
+        logdensity_mvnormal_ω($UnrollQ, U, y)
+    end
+end
+
+@generated function logdensity_mvnormal_ω(::UnrollQ, U::KnownSize{Tuple{k,k}, <:UpperTriangular}, y::AbstractVector{T}) where {k,T, UnrollQ<:MayUnroll}
     log2π = log(big(2) * π)
 
     header = quote
+        $(Expr(:meta,:inline))
         U = U.value
         Udata = U.data
         # if z = Lᵗy, the logdensity depends on `det(U)` and `z ⋅ z`. So we find `z`
         z_dot_z = zero(T)
     end
 
-    body = if k > 20
-        quote
-            @fastmath for j ∈ 1:$k
-                zj = zero(T)
-                for i ∈ 1:j
-                    @inbounds zj += Udata[i, j] * y[i]
-                end
-                z_dot_z += zj^2
-            end
-        end
-    else
+    body = if UnrollQ <: Unroll
         quote
             @inbounds begin
                 Base.Cartesian.@nexprs $k j -> begin
@@ -154,6 +159,16 @@ logdensity_mvnormal_ω(UL::Union{UpperTriangular, LowerTriangular}, y::AbstractV
                     end
                     z_dot_z += zj^2
                 end
+            end
+        end
+    else
+        quote
+            @fastmath for j ∈ 1:$k
+                zj = zero(T)
+                for i ∈ 1:j
+                    @inbounds zj += Udata[i, j] * y[i]
+                end
+                z_dot_z += zj^2
             end
         end
     end
