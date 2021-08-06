@@ -31,6 +31,8 @@ end
 # @btime Dists.logpdf(Dists.MvNormalCanon(PDMat($C)), $y)
 # @btime Dists.logpdf(Dists.MvNormal(PDMat($C)), $y)
 
+using Plots
+
 plot(σtimes[1:end] .* 1e6; dpi=300, legend=150, label="σ parameterization")
 plot!(ωtimes[1:end] .* 1e6, label="ω parameterization")
 xlabel!("Dimensions")
