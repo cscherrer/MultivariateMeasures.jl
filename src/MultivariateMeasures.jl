@@ -1,5 +1,6 @@
 module MultivariateMeasures
 
-# Write your package code here.
+using MeasureTheory
+include("mvnormal.jl")
 
 end
