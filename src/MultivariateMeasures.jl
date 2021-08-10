@@ -13,6 +13,6 @@ KnownSize(x::T) where {T} = KnownSize{Tuple{ArrayInterface.known_size(T)...}, T}
 using MeasureTheory
 using KeywordCalls
 include("utils.jl")
-include("mvnormal.jl")
+include("parameterized/mvnormal.jl")
 
 end
